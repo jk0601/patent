@@ -20,13 +20,19 @@ status = {
 
 
 def extract_pages(path):
-    with pymupdf.open(path) as doc:
+    try:
+        doc = pymupdf.open(path)
+    except Exception:
+        raise ValueError("PDF로 열 수 없습니다. 파일이 손상되었거나 PDF가 아닙니다")
+    with doc:
         if doc.needs_pass:
             raise ValueError("암호가 걸린 PDF라 열 수 없습니다")
         out = []
         for page in doc:
             t = page.get_text("text") or ""
             out.append(t.replace("\x00", "").strip())
+        if not out:
+            raise ValueError("쪽이 하나도 없습니다. 손상된 PDF일 수 있습니다")
         return out
 
 

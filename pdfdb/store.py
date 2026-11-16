@@ -245,8 +245,8 @@ def list_documents(category=None, name=None, scanned=None, sort="recent"):
         sql += " AND category=?"
         args.append(category)
     if name:
-        sql += " AND filename LIKE ?"
-        args.append(f"%{name}%")
+        sql += " AND filename LIKE ? ESCAPE '!'"
+        args.append(f"%{_like_escape(name)}%")
     if scanned:
         sql += " AND is_scanned=1"
     order = {
@@ -327,13 +327,13 @@ def search(query, category=None, require_all=True, limit=60, terms=None):
                 "SELECT CAST(doc_id AS INTEGER) doc_id, CAST(page_no AS INTEGER) page_no, text "
                 "FROM pages_fts WHERE pages_fts MATCH ? LIMIT 5000", (match,)).fetchall()
         else:
-            where = " OR ".join("text LIKE ?" for _ in terms)
+            where = " OR ".join("text LIKE ? ESCAPE '!'" for _ in terms)
             rows = con.execute(
                 f"SELECT doc_id, page_no, text FROM pages WHERE {where} LIMIT 5000",
-                [f"%{t}%" for t in terms]).fetchall()
-        name_where = " OR ".join("filename LIKE ?" for _ in terms)
+                [f"%{_like_escape(t)}%" for t in terms]).fetchall()
+        name_where = " OR ".join("filename LIKE ? ESCAPE '!'" for _ in terms)
         name_hits = {r[0] for r in con.execute(
-            f"SELECT id FROM documents WHERE {name_where}", [f"%{t}%" for t in terms])}
+            f"SELECT id FROM documents WHERE {name_where}", [f"%{_like_escape(t)}%" for t in terms])}
         docs = {r["id"]: r for r in con.execute("SELECT * FROM documents")}
 
     per_doc = defaultdict(lambda: {"pages": [], "found": set(), "score": 0})
