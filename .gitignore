@@ -1,0 +1,8 @@
+# 각자 PC에서 만들어지는 것들 (GitHub에 올리지 않음)
+.venv/
+data/
+PDF넣는곳/
+분류별_정리/
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF 자료 검색기</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">PDF</span> 자료 검색기</div>
+  <nav id="tabs">
+    <button data-tab="home" class="on">시작</button>
+    <button data-tab="search">검색</button>
+    <button data-tab="docs">문서 목록</button>
+    <button data-tab="analysis">분석</button>
+    <button data-tab="ask">질문하기</button>
+    <button data-tab="settings">설정</button>
+  </nav>
+  <span id="aiBadge" class="badge">AI 꺼짐</span>
+</header>
+
+<main>
+<!-- 시작 -->
+<section id="tab-home" class="tab on">
+  <div class="cards" id="statCards"></div>
+
+  <div class="panel">
+    <h2>1. PDF 넣기</h2>
+    <p class="muted">세 가지 방법 중 편한 것을 쓰세요. 이미 넣은 파일은 바뀌지 않았으면 다시 읽지 않습니다.</p>
+    <div class="grid3">
+      <div class="box">
+        <h3>폴더 통째로 넣기</h3>
+        <p class="muted small">PDF가 들어 있는 폴더를 고르면 하위 폴더까지 모두 읽습니다. 프로그램을 다시 켤 때마다 이 폴더의 새 파일도 자동으로 반영됩니다.</p>
+        <div class="row">
+          <input id="folderInput" placeholder="예: C:\Users\홍길동\Documents\신고사건">
+        </div>
+        <div class="row">
+          <button class="btn" id="pickBtn">폴더 고르기…</button>
+          <button class="btn primary" id="importBtn">가져오기</button>
+        </div>
+      </div>
+      <div class="box drop" id="dropZone">
+        <h3>끌어다 놓기</h3>
+        <p class="muted small">PDF 파일을 이 상자 위로 끌어다 놓거나, 눌러서 파일을 고르세요.</p>
+        <input type="file" id="fileInput" accept="application/pdf,.pdf" multiple hidden>
+        <button class="btn" id="fileBtn">파일 고르기…</button>
+      </div>
+      <div class="box">
+        <h3>'PDF넣는곳' 폴더에 복사</h3>
+        <p class="muted small">프로그램 폴더 안의 <b>PDF넣는곳</b>에 파일을 복사한 뒤 '새 파일 확인'을 누르세요.</p>
+        <div class="row">
+          <button class="btn" id="openInboxBtn">폴더 열기</button>
+          <button class="btn primary" id="rescanBtn">새 파일 확인</button>
+        </div>
+      </div>
+    </div>
+    <div id="progress" class="progress hidden">
+      <div class="bar"><i id="progressBar"></i></div>
+      <div id="progressText" class="small"></div>
+    </div>
+    <div id="importResult"></div>
+  </div>
+
+  <div class="panel">
+    <h2>2. 분류 현황</h2>
+    <p class="muted">문서 안의 단어를 보고 자동으로 나눈 결과입니다. 분류를 누르면 해당 문서 목록이 열립니다. 분류 기준은 '설정'에서 바꿀 수 있습니다.</p>
+    <div id="catChips" class="chips"></div>
+  </div>
+
+  <div class="panel">
+    <h2>등록된 폴더</h2>
+    <div id="sourceList"></div>
+  </div>
+</section>
+
+<!-- 검색 -->
+<section id="tab-search" class="tab">
+  <div class="panel">
+    <form id="searchForm" class="searchbar">
+      <input id="q" placeholder="찾을 단어를 입력하세요 (예: 광고 위반, 소명 기한)" autocomplete="off">
+      <select id="searchCat"><option value="">전체 분류</option></select>
+      <select id="searchMode">
+        <option value="all">모든 단어 포함</option>
+        <option value="any">하나라도 포함</option>
+      </select>
+      <button class="btn primary">검색</button>
+    </form>
+    <p class="muted small">띄어쓰기로 여러 단어를 넣을 수 있습니다. 결과의 쪽 번호를 누르면 원본 PDF의 그 쪽이 열립니다.</p>
+  </div>
+  <div id="searchResults"></div>
+</section>
+
+<!-- 문서 목록 -->
+<section id="tab-docs" class="tab">
+  <div class="panel">
+    <div class="searchbar">
+      <input id="docName" placeholder="파일 이름으로 거르기">
+      <select id="docCat"><option value="">전체 분류</option></select>
+      <select id="docSort">
+        <option value="recent">최근 추가순</option>
+        <option value="date">문서 날짜순</option>
+        <option value="name">이름순</option>
+      </select>
+      <label class="check"><input type="checkbox" id="docScanned"> 스캔본만</label>
+    </div>
+  </div>
+  <div id="docTable"></div>
+</section>
+
+<!-- 분석 -->
+<section id="tab-analysis" class="tab">
+  <div class="grid2">
+    <div class="panel"><h2>분류별 문서 수</h2><div id="chartCat"></div></div>
+    <div class="panel"><h2>연도별 문서 수</h2><p class="muted small">본문에서 처음 나온 날짜 기준</p><div id="chartYear"></div></div>
+  </div>
+  <div class="panel">
+    <div class="rowspread">
+      <h2>자주 나오는 단어</h2>
+      <select id="kwCat"><option value="">전체 분류</option></select>
+    </div>
+    <p class="muted small">단어를 누르면 그 단어로 검색합니다. 숫자는 그 단어가 주요 단어로 나온 문서 수입니다.</p>
+    <div id="kwCloud" class="chips"></div>
+  </div>
+  <div class="panel">
+    <h2>내보내기·정리</h2>
+    <div class="row">
+      <a class="btn" href="/api/export/documents.csv">문서 목록을 엑셀(CSV)로 받기</a>
+      <button class="btn" id="organizeBtn">분류별 폴더로 사본 정리</button>
+    </div>
+    <p class="muted small">'분류별 폴더로 사본 정리'는 원본은 그대로 두고, 프로그램 폴더의 <b>분류별_정리</b>에 분류 이름별로 사본을 만듭니다.</p>
+    <div id="organizeResult"></div>
+  </div>
+</section>
+
+<!-- 질문하기 -->
+<section id="tab-ask" class="tab">
+  <div class="panel">
+    <h2>자료에 물어보기</h2>
+    <div id="askMode" class="notice"></div>
+    <form id="askForm">
+      <textarea id="question" rows="3" placeholder="예: 블로그 광고로 신고된 사건에서 소명 기한은 보통 며칠이었나요?"></textarea>
+      <div class="row"><button class="btn primary">질문하기</button></div>
+    </form>
+  </div>
+  <div id="askResult"></div>
+</section>
+
+<!-- 설정 -->
+<section id="tab-settings" class="tab">
+  <div class="panel">
+    <h2>외부 AI 연결 (선택)</h2>
+    <p>AI 키를 넣으면 <b>AI 요약</b>, <b>AI 질문 답변</b>, <b>스캔본 글자 읽기</b>를 쓸 수 있습니다. 키가 없어도 가져오기·분류·검색·분석·간단 요약은 모두 이 PC 안에서 동작합니다.</p>
+    <div class="notice warn">AI 기능을 누르면 해당 문서 내용이 인터넷을 통해 Anthropic(Claude)으로 전송됩니다. 개인정보나 미공개 사건이 담긴 문서는 기관 방침을 확인한 뒤 사용하세요. 가져오기·검색은 AI 키가 있어도 외부로 아무것도 보내지 않습니다.</div>
+    <div class="form">
+      <label>현재 상태 <span id="keyState" class="muted"></span></label>
+      <label>API 키 <input id="apiKey" type="password" placeholder="sk-ant-로 시작하는 키" autocomplete="off"></label>
+      <label>AI 모델 <select id="model"></select></label>
+      <div class="row">
+        <button class="btn primary" id="saveKeyBtn">저장하고 연결 확인</button>
+        <button class="btn" id="clearKeyBtn">키 지우기 (AI 끄기)</button>
+      </div>
+      <div id="keyResult"></div>
+      <p class="muted small">키는 console.anthropic.com에서 만들 수 있으며, 이 PC의 data/settings.json 파일에만 저장됩니다.</p>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>분류 기준</h2>
+    <p class="muted">한 줄에 분류 하나씩, <b>분류이름: 단어, 단어, 단어</b> 형식으로 적습니다. 문서에 그 단어가 많이 나올수록, 파일 이름에 들어 있을수록 그 분류로 들어갑니다. 저장하면 전체 문서를 다시 분류합니다(직접 바꾼 문서는 그대로 둡니다).</p>
+    <textarea id="catText" rows="10" class="mono"></textarea>
+    <div class="row">
+      <button class="btn primary" id="saveCatBtn">저장하고 다시 분류</button>
+      <button class="btn" id="resetCatBtn">처음 기준으로 되돌리기</button>
+    </div>
+    <div id="catResult"></div>
+  </div>
+  <div class="panel">
+    <h2>데이터 위치</h2>
+    <p class="muted small">모든 데이터는 이 PC의 아래 폴더에만 저장됩니다. 프로그램을 다른 PC로 옮기려면 프로그램 폴더를 통째로 복사하면 됩니다.</p>
+    <div class="row"><code id="dataDir"></code><button class="btn" id="openDataBtn">폴더 열기</button></div>
+  </div>
+</section>
+</main>
+
+<!-- 문서 상세 -->
+<div id="drawer" class="drawer hidden">
+  <div class="drawer-bg" data-close></div>
+  <div class="drawer-panel">
+    <button class="close" data-close aria-label="닫기">✕</button>
+    <div id="drawerBody"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
